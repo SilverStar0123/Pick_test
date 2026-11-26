@@ -116,7 +116,7 @@ export function splitSheetUnits(value: string): string[] {
 
 export async function loadSheetAgencies(sheet: PickSheetId): Promise<Agency[]> {
   if (sheet === "current") return loadAgencies();
-  const source = PICK_SHEETS[sheet].source;
+  const source = PICK_SHEETS[sheet].source.toLowerCase();
   const [rows, unitRows, imageRows] = await Promise.all([
     loadCsv("ES_list.csv"),
     loadCsv("units.csv").catch(() => []),
@@ -144,13 +144,20 @@ export async function loadSheetAgencies(sheet: PickSheetId): Promise<Agency[]> {
   // 스페셜 유닛의 표시는 CSV를 기준으로 하되, 사용자가 지정한 유닛 순서를 우선합니다.
   // 새 이름(Double Face 등)이 추가되어도 pickSheets.ts 수정을 기다리지 않고 표시합니다.
   // 그룹 ID는 CSV에 적힌 원래 이름을 사용하므로 저장된 선택과 호환됩니다.
-  const csvUnitNames = Array.from(new Set(rows.flatMap((r) => splitSheetUnits(r[source] || ""))));
+  const groupNames = (value: string): string[] => splitSheetUnits(value).map(label => {
+    if (sheet !== "school") return label;
+    for (const school of ["레이메이", "슈에츠"]) {
+      if (label === school || label.startsWith(school + " ")) return school;
+    }
+    return label;
+  });
+  const csvUnitNames = Array.from(new Set(rows.flatMap((r) => groupNames(r[source] || ""))));
   const names = sheet === "special"
     ? [...SPECIAL_UNITS.filter((unit) => csvUnitNames.includes(unit)),
        ...csvUnitNames.filter((unit) => !(SPECIAL_UNITS as readonly string[]).includes(unit))]
-    : csvUnitNames;
+    : sheet === "school" ? csvUnitNames.sort((a, b) => a.localeCompare(b, "ko", { numeric: true })) : csvUnitNames;
   const groups: Group[] = names.flatMap((unit) => {
-    const roster = rows.filter((r) => splitSheetUnits(r[source] || "").includes(unit));
+    const roster = rows.filter((r) => groupNames(r[source] || "").includes(unit));
     if (!roster.length) return []; // CSV가 준비되지 않은 팀은 빈 선택지로 표시하지 않음
     const unique = new Set<string>();
     const members: Member[] = roster.map((r) => {
@@ -166,11 +173,16 @@ export async function loadSheetAgencies(sheet: PickSheetId): Promise<Agency[]> {
         img: resolveImg(chosenImg, MEMBER_IMG_DIR) || fallback, fallback
       };
     });
-    return [{ id: unit, name: unit, names: namesMap[unit.toLowerCase()],
+    const label = sheet === "school" && /^\d+-[A-Z]$/.test(unit) ? `유메노사키 ${unit}` : unit;
+    if (sheet === "school") {
+      const schoolNames = unit === "레이메이" ? ["Reimei", "玲明"] : unit === "슈에츠" ? ["Shuetsu", "秀越"] : [`Yumenosaki ${unit}`, `夢ノ咲 ${unit}`];
+      namesMap[unit.toLowerCase()] = { en: schoolNames[0], ja: schoolNames[1] };
+    }
+    return [{ id: unit, name: label, names: namesMap[unit.toLowerCase()],
       logo: logoMap[unit.toLowerCase()] || badgeUri(unit, 120, 120, true), members }];
   });
   if (!groups.length) return [];
   const name = PICK_SHEETS[sheet].labels.ko;
-  return [{ id: `sheet-${sheet}`, name,
+  return [{ id: `sheet-${sheet}`, name, names: PICK_SHEETS[sheet].labels,
     logo: badgeUri(name, 240, 48, false), groups }];
 }

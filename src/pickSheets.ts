@@ -3,7 +3,7 @@
 // - multiplayer: 공유방 생성·참여 UI 표시 여부
 // - showInIndex: 화면 위 책갈피 인덱스 표시 여부 (false여도 직접 링크는 열림)
 // 주의: multiplayer를 새로 활성화하는 경우 해당 Firestore 컬렉션의 보안 규칙이 필요합니다.
-export type PickSheetId = "current" | "special" | "shuffle1" | "shuffle2";
+export type PickSheetId = "school" | "current" | "special" | "shuffle1" | "shuffle2";
 
 export const SPECIAL_UNITS = [
   "Eve", "Adam", "J&A", "프로듀서", "슈퍼 아이돌",
@@ -62,7 +62,7 @@ export function groupSpecialUnits<T extends { id: string }>(
 
 export type PickSheet = {
   id: PickSheetId;
-  source: "unit" | "ex_unit" | "shuffle1" | "shuffle2";
+  source: "Yume_school" | "unit" | "ex_unit" | "shuffle1" | "shuffle2";
   multiplayer: boolean;
   showInIndex: boolean;
   collection: string;
@@ -89,6 +89,15 @@ export const PICK_SHEETS: Record<PickSheetId, PickSheet> = {
     route: "#/picks/special",
     labels: { ko: "스페셜 유닛", en: "Special Units", ja: "スペシャルユニット" }
   },
+  school: {
+    id: "school",
+    source: "Yume_school",
+    multiplayer: false,
+    showInIndex: true,
+    collection: "schoolRooms",
+    route: "#/picks/school",
+    labels: { ko: "학교 취향표", en: "School Picks", ja: "学校別セレクト" }
+  },
   shuffle1: {
     id: "shuffle1",
     source: "shuffle1",
@@ -112,7 +121,7 @@ export const PICK_SHEETS: Record<PickSheetId, PickSheet> = {
 };
 
 // 내부용 전체 목록: 숨긴 취향표의 주소와 저장 데이터도 그대로 유지합니다.
-export const PICK_SHEET_IDS: PickSheetId[] = ["current", "special", "shuffle1", "shuffle2"];
+export const PICK_SHEET_IDS: PickSheetId[] = ["current", "special", "school", "shuffle1", "shuffle2"];
 // 인덱스에 표시할 목록: showInIndex가 true인 종류만 보여 줍니다.
 export const VISIBLE_PICK_SHEET_IDS: PickSheetId[] = PICK_SHEET_IDS.filter(
   (id) => PICK_SHEETS[id].showInIndex
@@ -122,6 +131,7 @@ export const VISIBLE_PICK_SHEET_IDS: PickSheetId[] = PICK_SHEET_IDS.filter(
 export function sheetFromHash(hash: string): PickSheetId | null {
   const path = hash.replace(/^#\/?/, "").split("?")[0].replace(/\/$/, "").toLowerCase();
   if (path === "picks" || path === "home") return "current";
+  if (path === "picks/school") return "school";
   if (path === "picks/special") return "special";
   if (path === "picks/shuffle1") return "shuffle1";
   if (path === "picks/shuffle2") return "shuffle2";
