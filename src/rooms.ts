@@ -79,7 +79,7 @@ export function loadRoomCache(rid: string, sheet: PickSheetId = "current"): Room
       const picks: Picks = {};
       if (u.picks && typeof u.picks === "object") {
         Object.entries(u.picks as Record<string, unknown>).forEach(([g, m]) => {
-          if (typeof m === "string") picks[g] = m;
+          if (typeof m === "string") picks[g] = ID_ALIASES[m] ?? m;
         });
       }
       const ts = Array.isArray(u.ts) && u.ts.length === 2 ? new Timestamp(u.ts[0], u.ts[1]) : null;

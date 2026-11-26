@@ -161,8 +161,8 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
   // 언어가 바뀌면 <html lang>과 탭 제목도 맞춤
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.title = activeTab === "taste" ? tasteTitle[lang] : activeTab === "quiz" ? translate(lang, "quizTitle") : `${titleForSheet(lang)} | PickYours`;
-  }, [lang, activeTab]);
+    document.title = activeTab === "taste" ? tasteTitle[lang] : activeTab === "quiz" ? translate(lang, "quizTitle") : `${sheetConfig.labels[lang]} | PickYours`;
+  }, [lang, activeTab, sheetConfig]);
 
   // 주소에 ?lang= 이 실려 왔다면(앱 안 브라우저에서 넘어온 경우) 이 기기의 언어로 저장하고,
   // 공유 링크에 언어가 섞이지 않도록 주소에서 지움
@@ -259,7 +259,7 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sheetId]);
 
   // 앱 안 브라우저에서 '기본 브라우저로 열기'로 넘어온 경우: 주소에 실린 선택·닉네임을 이어받음
   useEffect(() => {
@@ -302,7 +302,7 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
       saveMyRooms(next, sheetId);
       return next;
     });
-  }, [roomId, roomName, roomMetaLoaded]);
+  }, [roomId, roomName, roomMetaLoaded, sheetId]);
 
   // ── 방 불러오기: 이 기기에 저장된 결과가 있으면 먼저 보여주고, 오래됐을 때만 서버를 읽음
   useEffect(() => {
@@ -360,7 +360,7 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
         if (isLatest()) setRoomLoading(false);
       }
     })();
-  }, [roomId, uid, authError, roomRefreshTick]);
+  }, [roomId, uid, authError, roomRefreshTick, sheetId]);
 
   // 결과표를 서버에서 다시 읽기 (실시간 연결 대신 사용)
   const refreshRoom = () => {
@@ -483,10 +483,10 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
   // 내 선택/닉네임이 바뀔 때마다 이 기기에 저장
   useEffect(() => {
     saveLocal(sheetLocalKey(PICKS_KEY, sheetId), JSON.stringify(picks));
-  }, [picks]);
+  }, [picks, sheetId]);
   useEffect(() => {
     saveLocal(sheetLocalKey(NICK_KEY, sheetId), nickname);
-  }, [nickname]);
+  }, [nickname, sheetId]);
 
   // CSV가 바뀌어 없어진 멤버/유닛이 저장돼 있으면 정리
   useEffect(() => {
@@ -550,7 +550,7 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
       .flatMap((a) => a.groups)
       .map((g) => {
         const idx = g.members.findIndex((m) => m.id === picks[g.id]);
-        return idx >= 0 ? idx.toString(36) : "-";
+        return idx >= 0 && idx < 36 ? idx.toString(36) : "-";
       })
       .join("");
     const u = new URL(window.location.href);
@@ -1062,7 +1062,10 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
     <div className="App">
       {siteHeader}
       {activeTab === "picks" && (
-        <nav className="pick-bookmark-nav" aria-label={lang === "ko" ? "취향표 종류" : "Pick sheet categories"}>
+        <nav
+          className="pick-bookmark-nav"
+          aria-label={lang === "ko" ? "취향표 종류" : lang === "ja" ? "好み表の種類" : "Pick sheet categories"}
+        >
           {VISIBLE_PICK_SHEET_IDS.map((id) => (
             <button key={id} type="button"
               className={`pick-bookmark-tab${sheetId === id ? " active" : ""}`}
@@ -1217,11 +1220,11 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
                                   {pick ? (
                                     <img src={pick.img} alt={pick.name} onError={onImgError(pick.fallback)} />
                                   ) : (
-                                    <span aria-label={lang === "ko" ? "미선택" : "Not selected"}>—</span>
+                                    <span aria-label={lang === "ko" ? "미선택" : lang === "ja" ? "未選択" : "Not selected"}>—</span>
                                   )}
                                 </div>
                                 <div className="personal-special-name">
-                                  {pick?.name || (lang === "ko" ? "미선택" : "—")}
+                                  {pick?.name || (lang === "ko" ? "미선택" : lang === "ja" ? "未選択" : "—")}
                                 </div>
                               </div>
                             );

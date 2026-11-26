@@ -5,7 +5,6 @@ import type { Agency } from "./types";
 import { loadAgencies, loadCsv, stripQuotes } from "./csv";
 import { localizeAgencies } from "./localize";
 import { SHUFFLE_UNIT_ID, FUSION_UNIT_ID, COLLAB_UNIT_ID, SOLO_UNIT_ID, JA_UNIT_ID, classifyQuizSongUnit, makeOfficialUnitAliases, makeSoloArtistAliases } from "./quizUnits";
-export { SHUFFLE_UNIT_ID, FUSION_UNIT_ID, COLLAB_UNIT_ID, SOLO_UNIT_ID, JA_UNIT_ID } from "./quizUnits";
 import "./quiz.css";
 import { chooseClipStart, parseStartSeconds } from "./quizPlayback";
 import type { ClipMode } from "./quizPlayback";
@@ -21,7 +20,6 @@ import type { QuizPool } from "./quizResults";
 import { loadQuizPercentileData, calculateQuizPercentile } from "./quizPercentiles";
 import { getAcceptedAnswers, normalizeAnswer, isCorrectGuess } from "./quizAnswer";
 import { findQuizSongSuggestions } from "./quizSuggestions";
-export { normalizeAnswer, isCorrectGuess } from "./quizAnswer";
 import type { QuizPercentile } from "./quizPercentiles";
 import {
   QUIZ_SHARE_HASHTAGS,
@@ -33,6 +31,9 @@ import {
   summarizeQuizPlayRecords
 } from "./quizShare";
 import type { QuizResultInfo, ResultCardText } from "./quizShare";
+
+export { SHUFFLE_UNIT_ID, FUSION_UNIT_ID, COLLAB_UNIT_ID, SOLO_UNIT_ID, JA_UNIT_ID } from "./quizUnits";
+export { normalizeAnswer, isCorrectGuess } from "./quizAnswer";
 
 export interface SongItem {
   id: string;
@@ -402,27 +403,41 @@ export default function SongQuiz({ lang, t }: SongQuizProps) {
       try {
         // 앱에서 현재 보고 있던 시트의 agencies를 받지 않고, 항상 unit 기반 16개 유닛을 로드합니다.
         // Firestore 요청은 발생하지 않으며 CSV는 배포 버전별 브라우저 캐시를 재사용합니다.
-        const [currentAgencies, memberRows, songRows, audioManifest] = await Promise.all([
-          loadAgencies(), loadCsv("ES_list.csv"), loadCsv("songs.csv"),
+        const fetchJsonObject = (path: string) =>
+          fetch(`${process.env.PUBLIC_URL || "."}/${path}`)
+            .then(async (response) => (response.ok ? await response.json() : {}))
+            .then((value) =>
+              value && typeof value === "object" && !Array.isArray(value)
+                ? (value as Record<string, unknown>)
+                : {}
+            )
+            .catch(() => ({} as Record<string, unknown>));
+
+        const [currentAgencies, memberRows, songRows, audioManifest, audioConfig] = await Promise.all([
+          loadAgencies(),
+          loadCsv("ES_list.csv"),
+          loadCsv("songs.csv"),
           // 없는 경우 빈 목록으로 처리: 기존 YouTube 퀴즈를 망가뜨리지 않습니다.
-          fetch(`${process.env.PUBLIC_URL || "."}/audio-manifest.json`)
-            .then(async (response) => response.ok ? await response.json() : {})
-            .then((value) => (value && typeof value === "object" && !Array.isArray(value))
-              ? (value as Record<string, unknown>) : {})
-            .catch(() => ({} as Record<string, unknown>))
+          fetchJsonObject("audio-manifest.json"),
+          fetchJsonObject("audio-config.json")
         ]);
         const availableAudio = (audioManifest.videos && typeof audioManifest.videos === "object")
           ? audioManifest.videos as Record<string, string>
           : {};
+        const configBaseUrl = typeof audioConfig.baseUrl === "string" ? audioConfig.baseUrl.trim() : "";
+        const audioBaseUrl = (
+          process.env.REACT_APP_AUDIO_BASE_URL ||
+          configBaseUrl ||
+          "https://pickyourstar-audio.dukae03.workers.dev"
+        ).replace(/\/+$/, "");
         const makeAudioUrl = (url: string) => {
           const value = url.trim();
           if (!value) return undefined;
           if (/^https?:\/\//i.test(value) || value.startsWith("/")) return value;
           const relative = value.replace(/^\.\//, "");
           if (relative.startsWith("audio/")) {
-            const base = (process.env.REACT_APP_AUDIO_BASE_URL || "https://pickyourstar-audio.dukae03.workers.dev").replace(/\/+$/, "");
             // Encode path segments so #, ?, spaces and non-ASCII song titles stay in the key.
-            return `${base}/${relative.split("/").map(part => encodeURIComponent(part)).join("/")}`;
+            return `${audioBaseUrl}/${relative.split("/").map((part) => encodeURIComponent(part)).join("/")}`;
           }
           return `${process.env.PUBLIC_URL || "."}/${relative}`;
         };
@@ -676,10 +691,12 @@ export default function SongQuiz({ lang, t }: SongQuizProps) {
             primeRequestRef.current = null;
             setPreparingAudio(false);
           } else {
+            const curSong = currentSongRef.current;
+            if (!curSong) return;
             playerRef.current.pauseVideo?.();
             loadedVideoIdRef.current = videoId;
             nextCuedRef.current = {
-              questionId: currentSongRef.current!.id, videoId, start: targetStart
+              questionId: curSong.id, videoId, start: targetStart
             };
             playerRef.current.cueVideoById({ videoId, startSeconds: targetStart });
           }
@@ -1175,7 +1192,7 @@ export default function SongQuiz({ lang, t }: SongQuizProps) {
 
   // +1초 늘리기 (최대 5초)
   const extendDuration = () => {
-    if (pendingPlayRef.current) return;
+    if (pendingPlayRef.current || preparingAudio) return;
     const next = Math.min(5, clipDuration + 1);
     setClipDuration(next);
     playSnippet(next, startSec);
@@ -1183,7 +1200,7 @@ export default function SongQuiz({ lang, t }: SongQuizProps) {
 
   // 다른 1초 구간 뽑기
   const rerollSpot = () => {
-    if (clipMode !== "random" || pendingPlayRef.current || !currentSong) return;
+    if (clipMode !== "random" || pendingPlayRef.current || preparingAudio || !currentSong) return;
     const totalDur = usesHostedAudio(currentSong)
       ? Number(localAudioRef.current?.duration || 0)
       : playerRef.current && playerReadyRef.current && loadedVideoIdRef.current === currentSong.videoId
