@@ -341,6 +341,219 @@ async function renderSpecialCollectionBlob(
   );
 }
 
+// 학교 취향표 전용: 녹색 칠판 배경과 나무 테두리, 반 대표 학생 명찰(이미지 상단) 스타일.
+async function renderSchoolChalkboardBlob(
+  agencies: Agency[],
+  picks: Picks,
+  memberMap: Record<string, Member>,
+  title: string,
+  collectionName: string,
+  lang: Lang
+): Promise<Blob> {
+  const groups = agencies.flatMap((a) => a.groups);
+  const FRAME = 22;
+  const W = 860;
+  const BOARD_X = FRAME;
+  const BOARD_Y = FRAME;
+  const BOARD_W = W - FRAME * 2;
+  const PAD = 28;
+  const GAP = 14;
+  const COLS = 4;
+  const CARD_W = (BOARD_W - PAD * 2 - GAP * (COLS - 1)) / COLS;
+  const CARD_H = 246;
+  const PHOTO = 132;
+  const HEADER_H = 128;
+  const TRAY_H = 16;
+  const rows = Math.ceil(groups.length / COLS);
+  const BOARD_H = PAD + HEADER_H + rows * CARD_H + Math.max(0, rows - 1) * GAP + PAD + 8;
+  const H = FRAME + BOARD_H + FRAME + TRAY_H;
+
+  const images = await Promise.all(
+    groups.map((g) => {
+      const member = memberMap[picks[g.id]];
+      return member && member.groupId === g.id
+        ? loadImage(member.img, member.fallback)
+        : Promise.resolve(null);
+    })
+  );
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(W * IMAGE_SCALE);
+  canvas.height = Math.round(H * IMAGE_SCALE);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas 미지원");
+  ctx.scale(IMAGE_SCALE, IMAGE_SCALE);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // 1) 바깥 나무 프레임 (따뜻한 오크 톤 그라데이션 + 입체 베벨)
+  const woodGrad = ctx.createLinearGradient(0, 0, W, H);
+  woodGrad.addColorStop(0, "#b67e4c");
+  woodGrad.addColorStop(0.5, "#8d5b32");
+  woodGrad.addColorStop(1, "#6f4423");
+  ctx.fillStyle = woodGrad;
+  roundRectPath(ctx, 0, 0, W, H - TRAY_H, 16);
+  ctx.fill();
+
+  // 나무 프레임 상단·좌측 하이라이트 라인
+  ctx.strokeStyle = "rgba(255, 236, 206, 0.38)";
+  ctx.lineWidth = 2;
+  roundRectPath(ctx, 2, 2, W - 4, H - TRAY_H - 4, 14);
+  ctx.stroke();
+
+  // 2) 하단 분필 받침대 (칠판 트레이) + 분필 디테일
+  const trayGrad = ctx.createLinearGradient(0, H - TRAY_H - 4, 0, H);
+  trayGrad.addColorStop(0, "#a8703f");
+  trayGrad.addColorStop(0.55, "#7d4e29");
+  trayGrad.addColorStop(1, "#5c371b");
+  ctx.fillStyle = trayGrad;
+  roundRectPath(ctx, 18, H - TRAY_H - 4, W - 36, TRAY_H + 2, 6);
+  ctx.fill();
+
+  // 트레이 위 흰색·노란색 분필 막대
+  ctx.fillStyle = "#f4f6f2";
+  roundRectPath(ctx, W - 150, H - TRAY_H - 9, 44, 6, 3);
+  ctx.fill();
+  ctx.fillStyle = "#f4d58d";
+  roundRectPath(ctx, W - 98, H - TRAY_H - 9, 32, 6, 3);
+  ctx.fill();
+
+  // 3) 녹색 칠판 표면
+  ctx.save();
+  roundRectPath(ctx, BOARD_X, BOARD_Y, BOARD_W, BOARD_H, 8);
+  ctx.clip();
+
+  const boardGrad = ctx.createLinearGradient(BOARD_X, BOARD_Y, BOARD_X, BOARD_Y + BOARD_H);
+  boardGrad.addColorStop(0, "#244c3a");
+  boardGrad.addColorStop(0.5, "#1e3f30");
+  boardGrad.addColorStop(1, "#183327");
+  ctx.fillStyle = boardGrad;
+  ctx.fillRect(BOARD_X, BOARD_Y, BOARD_W, BOARD_H);
+
+  // 은은한 분필 가루 광택 (중앙 하이라이트)
+  const dustGrad = ctx.createRadialGradient(
+    W / 2,
+    BOARD_Y + BOARD_H * 0.38,
+    40,
+    W / 2,
+    BOARD_Y + BOARD_H * 0.45,
+    BOARD_W * 0.65
+  );
+  dustGrad.addColorStop(0, "rgba(255, 255, 255, 0.06)");
+  dustGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = dustGrad;
+  ctx.fillRect(BOARD_X, BOARD_Y, BOARD_W, BOARD_H);
+  ctx.restore();
+
+  // 칠판 안쪽 테두리 음영
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.42)";
+  ctx.lineWidth = 3;
+  roundRectPath(ctx, BOARD_X + 1, BOARD_Y + 1, BOARD_W - 2, BOARD_H - 2, 8);
+  ctx.stroke();
+
+  // 4) 칠판 상단 헤더 (분필 글씨 느낌)
+  ctx.fillStyle = "#b8d2c2";
+  ctx.font = "bold 12px sans-serif";
+  ctx.fillText("PICKYOURS · SCHOOL ROSTER", W / 2, BOARD_Y + PAD + 8);
+
+  ctx.fillStyle = "#f7faf7";
+  ctx.font = "bold 30px sans-serif";
+  ctx.fillText(title, W / 2, BOARD_Y + PAD + 44, BOARD_W - PAD * 2);
+
+  const selected = groups.filter((g) => memberMap[picks[g.id]]?.groupId === g.id).length;
+  ctx.fillStyle = "#f5dc99";
+  ctx.font = "bold 15px sans-serif";
+  ctx.fillText(`${collectionName}  ·  ${selected} / ${groups.length}`, W / 2, BOARD_Y + PAD + 80, BOARD_W - PAD * 2);
+
+  // 헤더 아래 분필 구분선
+  ctx.strokeStyle = "rgba(232, 244, 236, 0.25)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(BOARD_X + PAD, BOARD_Y + PAD + 106);
+  ctx.lineTo(BOARD_X + BOARD_W - PAD, BOARD_Y + PAD + 106);
+  ctx.stroke();
+
+  const emptyLabel = lang === "ko" ? "미선택" : lang === "ja" ? "未選択" : "—";
+
+  // 5) 반 대표 학생 카드 (반 이름이 캐릭터 이미지 위쪽에 배치)
+  groups.forEach((group, i) => {
+    const member = memberMap[picks[group.id]];
+    const picked = member?.groupId === group.id ? member : null;
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const bx = BOARD_X + PAD + col * (CARD_W + GAP);
+    const by = BOARD_Y + PAD + HEADER_H + row * (CARD_H + GAP);
+    const cx = bx + CARD_W / 2;
+
+    // 카드 배경 (칠판 위 어두운 반투명 패널 + 은은한 분필 테두리)
+    ctx.fillStyle = "rgba(13, 31, 23, 0.46)";
+    roundRectPath(ctx, bx, by, CARD_W, CARD_H, 13);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(235, 245, 238, 0.24)";
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // 상단 반/학교 명찰 배지 (이미지 위쪽)
+    const badgeX = bx + 10;
+    const badgeY = by + 10;
+    const badgeW = CARD_W - 20;
+    const badgeH = 34;
+    ctx.fillStyle = "rgba(244, 213, 141, 0.16)";
+    roundRectPath(ctx, badgeX, badgeY, badgeW, badgeH, 8);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(244, 213, 141, 0.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = "#f9e5ad";
+    ctx.font = "bold 13.5px sans-serif";
+    ctx.fillText(group.name, cx, badgeY + badgeH / 2, badgeW - 12);
+
+    // 중앙 캐릭터 사진 (분필 화이트 액자 프레임)
+    const px = cx - PHOTO / 2;
+    const py = by + 56;
+    ctx.save();
+    roundRectPath(ctx, px, py, PHOTO, PHOTO, 10);
+    ctx.clip();
+    ctx.fillStyle = "#163024";
+    ctx.fillRect(px, py, PHOTO, PHOTO);
+    const im = images[i];
+    if (im && im.naturalWidth && im.naturalHeight) {
+      const side = Math.min(im.naturalWidth, im.naturalHeight);
+      ctx.drawImage(
+        im,
+        (im.naturalWidth - side) / 2,
+        (im.naturalHeight - side) / 2,
+        side,
+        side,
+        px,
+        py,
+        PHOTO,
+        PHOTO
+      );
+    } else {
+      ctx.fillStyle = "#7f9d8c";
+      ctx.font = "bold 24px sans-serif";
+      ctx.fillText("?", cx, py + PHOTO / 2);
+    }
+    ctx.restore();
+
+    ctx.strokeStyle = "rgba(245, 249, 246, 0.85)";
+    ctx.lineWidth = 2.2;
+    roundRectPath(ctx, px, py, PHOTO, PHOTO, 10);
+    ctx.stroke();
+
+    // 하단 캐릭터 이름 (선명한 분필 화이트)
+    ctx.fillStyle = picked ? "#f7faf7" : "#90ab9b";
+    ctx.font = "bold 15.5px sans-serif";
+    ctx.fillText(picked?.name || emptyLabel, cx, by + 216, CARD_W - 16);
+  });
+
+  return new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob 실패"))), "image/png")
+  );
+}
+
 export async function renderPersonalBlob(
   agencies: Agency[],
   picks: Picks,
@@ -352,6 +565,9 @@ export async function renderPersonalBlob(
 ): Promise<Blob> {
   if (sheetId === "special" && collectionName) {
     return renderSpecialCollectionBlob(agencies, picks, memberMap, title, collectionName, lang);
+  }
+  if (sheetId === "school" && collectionName) {
+    return renderSchoolChalkboardBlob(agencies, picks, memberMap, title, collectionName, lang);
   }
   if (collectionName) {
     return renderCollectionBlob(agencies, picks, memberMap, title, collectionName);

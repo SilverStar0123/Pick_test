@@ -1184,7 +1184,7 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
           <section className="finish-section">
             <h2 className="finish-title">{t("myPicksTitle")}</h2>
             <div className="personal-wrap">
-              <div ref={personalRef} className={`personal-card${sheetId !== "current" ? " personal-card--collection" : ""}${sheetId === "special" ? " personal-card--special" : ""}`}>
+              <div ref={personalRef} className={`personal-card${sheetId !== "current" ? " personal-card--collection" : ""}${sheetId === "special" ? " personal-card--special" : ""}${sheetId === "school" ? " personal-card--school" : ""}`}>
                 {sheetId !== "current" && (
                   <div className="personal-collection-eyebrow">PICKYOURS · {titleForSheet(lang)}</div>
                 )}
@@ -1244,8 +1244,12 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
                         {agency.groups.map((g) => {
                           const m = memberMap[picks[g.id]];
                           const pick = m && m.groupId === g.id ? m : undefined;
+                          const emptyLabel = lang === "ko" ? "미선택" : lang === "ja" ? "未選択" : "—";
                           return (
                             <div key={g.id} className="personal-pick">
+                              {sheetId === "school" && (
+                                <div className="pick-unit pick-unit--school" title={g.name}>{g.name}</div>
+                              )}
                               <div className="slot">
                                 {pick ? (
                                   <img src={pick.img} alt={pick.name} onError={onImgError(pick.fallback)} />
@@ -1253,8 +1257,10 @@ function PickYoursMain({ sheetId, onSwitchSheet }: {
                                   "?"
                                 )}
                               </div>
-                              <div className="pick-name">{pick ? pick.name : "\u00A0"}</div>
-                              <div className="pick-unit">{g.name}</div>
+                              <div className="pick-name">
+                                {pick ? pick.name : sheetId === "school" ? emptyLabel : "\u00A0"}
+                              </div>
+                              {sheetId !== "school" && <div className="pick-unit">{g.name}</div>}
                             </div>
                           );
                         })}
