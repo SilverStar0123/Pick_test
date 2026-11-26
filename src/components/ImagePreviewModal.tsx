@@ -21,6 +21,15 @@ export default function ImagePreviewModal({
   onSaveImage?: () => void;
   onCopyUrl: () => void;
 }) {
+  let canShareImage = false;
+  try {
+    canShareImage =
+      typeof navigator.canShare === "function" &&
+      navigator.canShare({ files: [new File([preview.blob], preview.name, { type: "image/png" })] });
+  } catch {
+    canShareImage = false;
+  }
+
   return (
     <div className="img-preview-overlay" onClick={onClose}>
       <div className="img-preview-box" onClick={(e) => e.stopPropagation()}>
@@ -30,12 +39,11 @@ export default function ImagePreviewModal({
           {t("previewGuideB")}
         </p>
         <div className="preview-actions">
-          {typeof navigator.canShare === "function" &&
-            navigator.canShare({ files: [new File([preview.blob], preview.name, { type: "image/png" })] }) && (
-              <button type="button" className="download-btn" onClick={onShare}>
-                {t("previewShare")}
-              </button>
-            )}
+          {canShareImage && (
+            <button type="button" className="download-btn" onClick={onShare}>
+              {t("previewShare")}
+            </button>
+          )}
           {onSaveImage && (
             <button type="button" className="download-btn" onClick={onSaveImage}>
               {t("quizShareSaveImage")}
