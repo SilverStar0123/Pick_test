@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type { Lang } from "./i18n";
 import type { Character } from "./similarTaste";
 import { pairKey } from "./tastePairs";
@@ -76,6 +76,8 @@ export default function TasteUnitDetails({
 
   const key = pairKey(ids);
   const catalogKey = catalog.map((c) => c.id).join("|");
+  const catalogRef = useRef(catalog);
+  catalogRef.current = catalog;
 
   useEffect(() => {
     setOpen(false);
@@ -94,7 +96,7 @@ export default function TasteUnitDetails({
         if (!r.ok) throw Error();
         return r.json();
       })
-      .then((v) => validateUnitData(v, catalog))
+      .then((v) => validateUnitData(v, catalogRef.current))
       .then((v) => {
         if (active) setData(v);
       })
@@ -105,8 +107,6 @@ export default function TasteUnitDetails({
       active = false;
       controller.abort();
     };
-    // The catalog contents, not the new array identity on each render, control reloads.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, data, retry, catalogKey]);
 
   const t = {
