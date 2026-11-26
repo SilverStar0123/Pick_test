@@ -115,22 +115,22 @@ async function renderCollectionBlob(
   ctx.scale(IMAGE_SCALE, IMAGE_SCALE);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#fffafb";
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, W, H);
 
   // 과한 대형 로고 대신 가벼운 헤더와 소분류 표시.
-  ctx.fillStyle = "#c66b84";
+  ctx.fillStyle = "#868e96";
   ctx.font = "bold 12px sans-serif";
   ctx.fillText("PICKYOURS · PERSONAL COLLECTION", W / 2, PAD + 12);
-  ctx.fillStyle = "#342e37";
+  ctx.fillStyle = "#333333";
   ctx.font = "bold 29px sans-serif";
   ctx.fillText(title, W / 2, PAD + 48, W - PAD * 2);
-  ctx.fillStyle = "#aa697d";
+  ctx.fillStyle = "#555555";
   ctx.font = "bold 15px sans-serif";
   ctx.fillText(collectionName, W / 2, PAD + 82, W - PAD * 2);
 
   const selected = groups.filter((g) => memberMap[picks[g.id]]?.groupId === g.id).length;
-  ctx.fillStyle = "#92838d";
+  ctx.fillStyle = "#868e96";
   ctx.font = "12px sans-serif";
   ctx.fillText(`${selected} / ${groups.length} SELECTED`, W / 2, PAD + 105);
 
@@ -142,10 +142,10 @@ async function renderCollectionBlob(
     const by = PAD + HEADER_H + row * (CARD_H + GAP);
     const cx = bx + CARD_W / 2;
 
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#f8f9fa";
     roundRectPath(ctx, bx, by, CARD_W, CARD_H, 14);
     ctx.fill();
-    ctx.strokeStyle = "#eee3e9";
+    ctx.strokeStyle = "#e9ecef";
     ctx.lineWidth = 1;
     ctx.stroke();
 
@@ -153,7 +153,7 @@ async function renderCollectionBlob(
     ctx.save();
     roundRectPath(ctx, x, y, PHOTO, PHOTO, 11);
     ctx.clip();
-    ctx.fillStyle = "#f4eef1";
+    ctx.fillStyle = "#e9ecef";
     ctx.fillRect(x, y, PHOTO, PHOTO);
     const im = images[i];
     if (im && im.naturalWidth && im.naturalHeight) {
@@ -163,17 +163,17 @@ async function renderCollectionBlob(
         (im.naturalHeight - side) / 2,
         side, side, x, y, PHOTO, PHOTO);
     } else {
-      ctx.fillStyle = "#b9aab6";
+      ctx.fillStyle = "#adb5bd";
       ctx.font = "bold 24px sans-serif";
       ctx.fillText("?", cx, y + PHOTO / 2);
     }
     ctx.restore();
 
     // 글자가 긴 팀(예: team 우시와카마루)은 넘치지 않도록 Canvas가 너비를 맞춰 줍니다.
-    ctx.fillStyle = picked ? "#3e3840" : "#a8a0a7";
+    ctx.fillStyle = picked ? "#444444" : "#adb5bd";
     ctx.font = "bold 15px sans-serif";
     ctx.fillText(picked?.name || "—", cx, by + 167, CARD_W - 15);
-    ctx.fillStyle = "#b2637f";
+    ctx.fillStyle = "#868e96";
     ctx.font = "12px sans-serif";
     ctx.fillText(group.name, cx, by + 195, CARD_W - 14);
   });
@@ -232,20 +232,20 @@ async function renderSpecialCollectionBlob(
   ctx.scale(IMAGE_SCALE, IMAGE_SCALE);
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillStyle = "#fff9fb";
+  ctx.fillStyle = "#ffffff";
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
   const selected = groups.filter((group) => memberMap[picks[group.id]]?.groupId === group.id).length;
-  ctx.fillStyle = "#b65a77";
+  ctx.fillStyle = "#868e96";
   ctx.font = "700 14px sans-serif";
   ctx.fillText("PICKYOURS · PERSONAL COLLECTION", WIDTH / 2, OUTER + 9);
-  ctx.fillStyle = "#352d36";
+  ctx.fillStyle = "#333333";
   ctx.font = "700 36px sans-serif";
   ctx.fillText(title, WIDTH / 2, OUTER + 49, CONTENT_W);
-  ctx.fillStyle = "#ad5877";
+  ctx.fillStyle = "#555555";
   ctx.font = "700 17px sans-serif";
   ctx.fillText(collectionName, WIDTH / 2, OUTER + 84);
-  ctx.fillStyle = "#847580";
+  ctx.fillStyle = "#868e96";
   ctx.font = "14px sans-serif";
   ctx.fillText(`${selected} / ${groups.length} SELECTED`, WIDTH / 2, OUTER + 113);
 
@@ -255,16 +255,16 @@ async function renderSpecialCollectionBlob(
     const sectionY = cursorY;
     const groupHeight = sectionHeight(section.groups.length);
     // 같은 섹션에 속한 선택들을 하나의 판 위에 묶되 색을 과하게 늘리지 않습니다.
-    ctx.fillStyle = "#ffffff";
+    ctx.fillStyle = "#f8f9fa";
     roundRectPath(ctx, groupX, sectionY, CONTENT_W, groupHeight, 20);
     ctx.fill();
-    ctx.strokeStyle = "#eee2e8";
+    ctx.strokeStyle = "#e9ecef";
     ctx.lineWidth = 1.2;
     ctx.stroke();
 
     const left = groupX + GROUP_PAD;
     const titleY = sectionY + GROUP_PAD + 18;
-    ctx.fillStyle = "#ac5772";
+    ctx.fillStyle = "#495057";
     roundRectPath(ctx, left, titleY - 15, 39, 30, 8);
     ctx.fill();
     ctx.fillStyle = "#ffffff";
@@ -272,11 +272,11 @@ async function renderSpecialCollectionBlob(
     ctx.fillText(String(sectionIndex + 1).padStart(2, "0"), left + 19.5, titleY);
 
     ctx.textAlign = "left";
-    ctx.fillStyle = "#453741";
+    ctx.fillStyle = "#333333";
     ctx.font = "700 20px sans-serif";
     ctx.fillText(section.title, left + 54, titleY);
     ctx.textAlign = "right";
-    ctx.fillStyle = "#ab9aa4";
+    ctx.fillStyle = "#868e96";
     ctx.font = "13px sans-serif";
     ctx.fillText(`${section.groups.length} UNITS`, WIDTH - OUTER - GROUP_PAD, titleY);
     ctx.textAlign = "center";
@@ -293,16 +293,16 @@ async function renderSpecialCollectionBlob(
       const bx = OUTER + GROUP_PAD + col * (cardW + CARD_GAP);
       const cx = bx + cardW / 2;
 
-      // 유닛명을 카드 맨 위의 진한 라벨로 고정: 캐릭터가 중복되어도 구분 가능.
-      ctx.fillStyle = "#fefbfc";
+      // 유닛명을 카드 맨 위의 라벨로 고정: 캐릭터가 중복되어도 구분 가능.
+      ctx.fillStyle = "#ffffff";
       roundRectPath(ctx, bx, by, cardW, CARD_H, 13);
       ctx.fill();
-      ctx.strokeStyle = "#eee6ea";
+      ctx.strokeStyle = "#e9ecef";
       ctx.stroke();
-      ctx.fillStyle = "#f6e7ed";
+      ctx.fillStyle = "#f1f3f5";
       roundRectPath(ctx, bx + 7, by + 7, cardW - 14, 38, 8);
       ctx.fill();
-      ctx.fillStyle = "#8e3958";
+      ctx.fillStyle = "#495057";
       ctx.font = `700 ${columns > 5 ? 12 : 14}px sans-serif`;
       ctx.fillText(group.name, cx, by + 26, cardW - 25);
 
@@ -312,7 +312,7 @@ async function renderSpecialCollectionBlob(
       ctx.save();
       roundRectPath(ctx, px, py, photo, photo, 10);
       ctx.clip();
-      ctx.fillStyle = "#f0eaf0";
+      ctx.fillStyle = "#e9ecef";
       ctx.fillRect(px, py, photo, photo);
       const img = imagesById.get(group.id);
       if (img && img.naturalWidth && img.naturalHeight) {
@@ -321,15 +321,15 @@ async function renderSpecialCollectionBlob(
           (img.naturalHeight - side) / 2, side, side,
           px, py, photo, photo);
       } else {
-        ctx.fillStyle = "#aca0a9";
+        ctx.fillStyle = "#adb5bd";
         ctx.font = "700 23px sans-serif";
         ctx.fillText(picked ? "?" : "—", cx, py + photo / 2);
       }
       ctx.restore();
 
-      ctx.fillStyle = picked ? "#39343b" : "#aca1a9";
+      ctx.fillStyle = picked ? "#444444" : "#adb5bd";
       ctx.font = `700 ${columns > 5 ? 13 : 15}px sans-serif`;
-      ctx.fillText(picked?.name || (lang === "ko" ? "미선택" : "—"),
+      ctx.fillText(picked?.name || (lang === "ko" ? "미선택" : lang === "ja" ? "未選択" : "—"),
         cx, by + 196, cardW - 16);
     });
 
