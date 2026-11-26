@@ -16,7 +16,7 @@ function compile(file, mocks={}) {
   return m.exports;
 }
 const sheets=compile('pickSheets.ts');
-assert.deepEqual(sheets.PICK_SHEET_IDS,['current','special','shuffle1','shuffle2']);
+assert.deepEqual(sheets.PICK_SHEET_IDS,['current','special','school','shuffle1','shuffle2']);
 assert.ok(sheets.SPECIAL_UNITS.length >= 16, '스페셜 유닛 목록이 예상보다 적습니다');
 assert.equal(new Set(sheets.SPECIAL_UNITS).size, sheets.SPECIAL_UNITS.length, '스페셜 유닛에 중복이 있습니다');
 assert.equal(sheets.PICK_SHEETS.special.collection,'specialRooms');
@@ -35,6 +35,7 @@ const mockRows={
  'units.csv': [{unit:'Eve',logo:'eve.webp',name_en:'Eve',name_ja:'Eve'}],
  'ex_unit_images.csv': [{name:'A',ex_unit:'Adam',img:'a_old.webp'}]
 };
+const actualRows = require('papaparse').parse(fs.readFileSync(path.join(src,'../public/ES_list.csv'),'utf8'), {header:true,skipEmptyLines:true}).data;
 const papa={parse:(u,opts)=>{const file=u.split('/').at(-1).split('?')[0];opts.complete({data:mockRows[file]||[]})}};
 const assets={avatarUri:x=>'avatar:'+x,badgeUri:x=>'badge:'+x,resolveAsset:x=>x,resolveImg:(x,d)=>x?d+'/'+x:undefined};
 const config={MEMBER_IMG_DIR:'img',LOGO_IMG_DIR:'img/logo',agencyConfig:[]};
@@ -51,5 +52,11 @@ Promise.all([csv.loadSheetAgencies('special'),csv.loadSheetAgencies('shuffle1'),
   assert.equal(adam.members[0].id,'Adam::A');
   assert.equal(shuffle1[0].groups[0].members.length,2);
   assert.equal(shuffle2[0].groups[0].members[0].name,'C');
-  console.log('11 routing/config/CSV/inheritance checks passed');
+  mockRows['ES_list.csv'] = actualRows;
+  assert.equal(sheets.sheetFromHash('#/picks/school'),'school');
+  return csv.loadSheetAgencies('school').then(([school])=>{
+    assert.deepEqual(school.groups.map(g=>[g.id,g.members.length]), [['1-A',5],['1-B',6],['2-A',6],['2-B',6],['3-A',7],['3-B',7],['레이메이',2],['슈에츠',2]]);
+  });
+}).then(()=>{
+  console.log('School and existing routing/config/CSV/inheritance checks passed');
 }).catch(e=>{console.error(e);process.exitCode=1});
